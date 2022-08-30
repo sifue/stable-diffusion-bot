@@ -1,5 +1,6 @@
 # Stable Diffusion Bot
-日本語でプロンプトを与えるとStable Diffusionの画像を投稿してくれるSlack Bot
+日本語でプロンプトを与えるとStable Diffusionの画像を投稿してくれるSlack Bot  
+RTX2070 8GB環境とGTX2060 6GB環境で操作確認済み。
 
 ## 環境導入と実行
 ```
@@ -38,6 +39,17 @@ python3 script/main.py
 - message.im
 - message.mpim 
 
+## トラブルシューティング
+
+以下のエラーが出る。
+
+```
+RuntimeError: CUDA error: unknown error
+CUDA kernel errors might be asynchronously reported at some other API call,so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1.
+```
+
+ビデオメモリが足りません。 `main.py` のコード内の画像のサイズを指定しているところを512ではなく8の倍数の384か256にして対応してください。
 
 ## 参考ドキュメント
 - [Stable Diffusion with 🧨 Diffusers](https://huggingface.co/blog/stable_diffusion)
