@@ -3,6 +3,8 @@
 RTX2070 8GB環境とGTX2060 6GB環境で操作確認済み。
 
 ## 環境導入と実行
+Stable Diffusionの公式版が動く環境の整備をした前提で以下を実行。([構築方法参考](https://zenn.dev/koyoarai_/articles/02f3ed864c6127bb2049))
+
 ```
 conda env create -f environment.yaml
 conda activate sdbot
