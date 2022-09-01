@@ -25,7 +25,7 @@ print('Model loading finished.')
 usingUser = None
 
 
-@app.message(re.compile(r"^!img ([ a-zA-Z0-9!-/:-@¥[-`{-~]+)$"))
+@app.message(re.compile(r"^!img ([ a-zA-Z0-9!-/:-@¥[-`'{-~]+)$"))
 def message_img(client, message, say, context):
     global usingUser
 
@@ -40,7 +40,7 @@ def message_img(client, message, say, context):
         with autocast(DEVICE):
             print(f'Generating start. ')
             image = pipe(prompt, guidance_scale=7.5,
-                        height=512,
+                        height=384,
                         width=512,
                         num_inference_steps=100)["sample"][0]
 
