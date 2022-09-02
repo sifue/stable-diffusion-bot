@@ -215,47 +215,50 @@ def message_img(client, message, say, context):
     global usingUser
     global pipe
     global pipeI2I
+    try:
+        if usingUser is not None:
+            say(f"<@{usingUser}> さんが画像を生成中ですのでしばらくお待ちください。")
+        
+        else:
+            if pipe is None:
+                del pipeI2I
+                pipeI2I = None
+                gc.collect()
 
-    if usingUser is not None:
-        say(f"<@{usingUser}> さんが画像を生成中ですのでしばらくお待ちください。")
-    
-    else:
+                say(f"text-to-imageのモデルのローディングを行います。")
+                print('Model(T2I) loading start.')
+                pipe = StableDiffusionPipeline.from_pretrained(
+                    MODEL_ID, revision="fp16", torch_dtype=torch.float16, use_auth_token=YOUR_TOKEN)
+                pipe.to(DEVICE)
+                print('Model(T2I) loading finished.')
 
-        if pipe is None:
-            del pipeI2I
-            pipeI2I = None
-            gc.collect()
+            usingUser = message['user']
+            prompt = context['matches'][0]
+            say(f"<@{message['user']}> さんのプロンプト `{prompt}` で画像を生成します。1分程度お待ちください。")
 
-            say(f"text-to-imageのモデルのローディングを行います。")
-            print('Model(T2I) loading start.')
-            pipe = StableDiffusionPipeline.from_pretrained(
-                MODEL_ID, revision="fp16", torch_dtype=torch.float16, use_auth_token=YOUR_TOKEN)
-            pipe.to(DEVICE)
-            print('Model(T2I) loading finished.')
+            with autocast(DEVICE):
+                print(f'Generating start. ')
+                image = pipe(prompt, guidance_scale=7.5,
+                            height=HEIGHT,
+                            width=WIDTH,
+                            num_inference_steps=100)["sample"][0]
 
-        usingUser = message['user']
-        prompt = context['matches'][0]
-        say(f"<@{message['user']}> さんのプロンプト `{prompt}` で画像を生成します。1分程度お待ちください。")
+                os.makedirs('./results', exist_ok=True)
+                image.save(GENERATED_FILEPATH)
+                print(f'Generating finished.')
 
-        with autocast(DEVICE):
-            print(f'Generating start. ')
-            image = pipe(prompt, guidance_scale=7.5,
-                        height=HEIGHT,
-                        width=WIDTH,
-                        num_inference_steps=100)["sample"][0]
+            client.files_upload(
+                channels=message['channel'],
+                file=GENERATED_FILEPATH,
+                title=prompt
+            )
 
-            os.makedirs('./results', exist_ok=True)
-            image.save(GENERATED_FILEPATH)
-            print(f'Generating finished.')
-
-        client.files_upload(
-            channels=message['channel'],
-            file=GENERATED_FILEPATH,
-            title=prompt
-        )
-
-        say(f"<@{message['user']}> さんのプロンプト `{prompt}` の画像の生成が終わりました。")
+            say(f"<@{message['user']}> さんのプロンプト `{prompt}` の画像の生成が終わりました。")
+            usingUser = None
+    except Exception as e:
         usingUser = None
+        print(e)
+        say(f"エラーが発生しました。やり方を変えて試してみてください。 Error: {e}")
 
 
 @app.message(re.compile(r"^!img-i <(https?://[\w/:%#\$&\?\(\)~\.=\+\-]+)> ([0-9\.]+) ([ a-zA-Z0-9!-/:-@¥[-`'{-~]+)$"))
@@ -263,78 +266,82 @@ def message_i2i(client, message, say, context):
     global usingUser
     global pipe
     global pipeI2I
+    try:
+        if usingUser is not None:
+            say(f"<@{usingUser}> さんが画像を生成中ですのでしばらくお待ちください。")
 
-    if usingUser is not None:
-        say(f"<@{usingUser}> さんが画像を生成中ですのでしばらくお待ちください。")
+        else:
+            if pipeI2I is None:
+                del pipe
+                pipe = None
+                gc.collect()
 
-    else:
-        if pipeI2I is None:
-            del pipe
-            pipe = None
-            gc.collect()
+                say(f"image-to-imageのモデルのローディングを行います。")
+                print('Model(I2I) loading start.')
+                scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012,
+                                        beta_schedule="scaled_linear", clip_sample=False, set_alpha_to_one=False)
+                pipeI2I = StableDiffusionImg2ImgPipeline.from_pretrained(
+                    MODEL_ID,
+                    scheduler=scheduler,
+                    revision="fp16",
+                    torch_dtype=torch.float16,
+                    use_auth_token=YOUR_TOKEN
+                ).to(DEVICE)
+                print('Model(I2I) loading finished.')
 
-            say(f"image-to-imageのモデルのローディングを行います。")
-            print('Model(I2I) loading start.')
-            scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012,
-                                    beta_schedule="scaled_linear", clip_sample=False, set_alpha_to_one=False)
-            pipeI2I = StableDiffusionImg2ImgPipeline.from_pretrained(
-                MODEL_ID,
-                scheduler=scheduler,
-                revision="fp16",
-                torch_dtype=torch.float16,
-                use_auth_token=YOUR_TOKEN
-            ).to(DEVICE)
-            print('Model(I2I) loading finished.')
+            url = context['matches'][0] # Slack上ではURLは <URL> の形式になっている
+            say(f"指定された画像のダウンロードを行います。")
 
-        url = context['matches'][0] # Slack上ではURLは <URL> の形式になっている
-        say(f"指定された画像のダウンロードを行います。")
+            SLACK_BOT_TOKEN = os.getenv('SLACK_BOT_TOKEN')
+            urlData = requests.get(url,
+                allow_redirects=True,
+                headers={'Authorization': f"Bearer {SLACK_BOT_TOKEN}"},
+                stream=True
+            ).content
+            with open(INIT_FILEPATH, mode='wb') as f:
+                f.write(urlData)
 
-        SLACK_BOT_TOKEN = os.getenv('SLACK_BOT_TOKEN')
-        urlData = requests.get(url,
-            allow_redirects=True,
-            headers={'Authorization': f"Bearer {SLACK_BOT_TOKEN}"},
-            stream=True
-        ).content
-        with open(INIT_FILEPATH, mode='wb') as f:
-            f.write(urlData)
+            usingUser = message['user']
 
-        usingUser = message['user']
+            strength = float(context['matches'][1])
+            if strength > 1.0:
+                strength = 1.0
+            elif strength < 0.0:
+                strength = 0.0
 
-        strength = float(context['matches'][1])
-        if strength > 1.0:
-            strength = 1.0
-        elif strength < 0.0:
-            strength = 0.0
+            prompt = context['matches'][2]
 
-        prompt = context['matches'][2]
+            say(f"<@{message['user']}> さんのプロンプト `{prompt}` で強度 `{strength}` で元画像から画像を生成します。1分程度お待ちください。")
 
-        say(f"<@{message['user']}> さんのプロンプト `{prompt}` で強度 `{strength}` で元画像から画像を生成します。1分程度お待ちください。")
+            with autocast(DEVICE):
+                with open(INIT_FILEPATH, "rb") as fh:
+                    init_img = Image.open(BytesIO(fh.read())).convert("RGB")
+                    init_img = init_img.resize((WIDTH, HEIGHT))
+                    init_image = preprocess(init_img)
 
-        with autocast(DEVICE):
-            with open(INIT_FILEPATH, "rb") as fh:
-                init_img = Image.open(BytesIO(fh.read())).convert("RGB")
-                init_img = init_img.resize((WIDTH, HEIGHT))
-                init_image = preprocess(init_img)
+                    print(f'Generating start. ')
+                    image = pipeI2I(prompt,
+                            guidance_scale=7.5,
+                            init_image=init_image,
+                            strength=strength,
+                            num_inference_steps=100)["sample"][0]
 
-                print(f'Generating start. ')
-                image = pipeI2I(prompt,
-                        guidance_scale=7.5,
-                        init_image=init_image,
-                        strength=strength,
-                        num_inference_steps=100)["sample"][0]
+                    os.makedirs('./results', exist_ok=True)
+                    image.save(GENERATED_FILEPATH)
+                    print(f'Generating finished.')
 
-                os.makedirs('./results', exist_ok=True)
-                image.save(GENERATED_FILEPATH)
-                print(f'Generating finished.')
+            client.files_upload(
+                channels=message['channel'],
+                file=GENERATED_FILEPATH,
+                title=prompt
+            )
 
-        client.files_upload(
-            channels=message['channel'],
-            file=GENERATED_FILEPATH,
-            title=prompt
-        )
-
-        say(f"<@{message['user']}> さんのプロンプト `{prompt}` の元画像からの画像の生成が終わりました。")
+            say(f"<@{message['user']}> さんのプロンプト `{prompt}` の元画像からの画像の生成が終わりました。")
+            usingUser = None
+    except Exception as e:
         usingUser = None
+        print(e)
+        say(f"エラーが発生しました。やり方を変えて試してみてください。 Error: {e}")
 
 @app.message(re.compile(r"^!img-help$"))
 def message_help(client, message, say, context):
