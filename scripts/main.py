@@ -338,7 +338,12 @@ def message_i2i(client, message, say, context):
 
 @app.message(re.compile(r"^!img-help$"))
 def message_help(client, message, say, context):
-    say(f"`!img [半角英数字記号で構成されるプロンプト]` の形式で画像の生成ができます。1分程度の時間がかかります。また誰かが生成している際には実行できません。内部的にはStable Diffusionというモデルを利用しています。そのため生成した画像のライセンスはCC0 1.0 Universal Public Domain Dedicationとなり誰にも著作権は発生しません。またプロンプト探しには https://lexica.art/ をご利用ください。")
+    say("`!img [半角英数字記号で構成されるプロンプト]` の形式で画像の生成ができます。\n" + 
+    "元画像指定する場合には、`!img-i [Slack内の画像のURL] [0.0～1.0までの強度] [プロンプト]` としてください。\n" + 
+    "生成には1分程度の時間がかかります。" + 
+    "また、誰かが生成している際には実行できません。内部的にはStable Diffusionというモデルを利用しています。" +
+     "そのため生成した画像のライセンスはCC0 1.0 Universal Public Domain Dedicationとなり誰にも著作権は発生しません。" + 
+     "またプロンプト探しには https://lexica.art/ をご利用ください。")
 
 
 @app.event("message")

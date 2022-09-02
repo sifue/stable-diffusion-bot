@@ -1,5 +1,6 @@
 # Stable Diffusion Bot
 日本語でプロンプトを与えるとStable Diffusionの画像を投稿してくれるSlack Bot  
+元画像を指定しての生成もできるコマンドも提供。
 RTX2070 8GB環境とGTX2060 6GB環境で操作確認済み。
 
 ## 環境導入と実行
@@ -24,8 +25,11 @@ python3 script/main.py
 ```
 ## Stable Diffusion Botの使い方
 
-- 画像生成: !img [プロンプト]
+- プロンプトから画像生成(t2i): !img [プロンプト]
+- 画像から画像生成(i2i): !img-i [URL] [0.0～1.0までの強度] [プロンプト]
 - ヘルプ表示: !img-help
+
+なお、画像から画像生成する際のURLはパブリックにアクセス可能なURLかSlack内の画像のURLである必要があります。  
 
 ## Slackのアプリに必要な権限
 アプリの作り方は[このドキュメント](https://slack.dev/bolt-python/ja-jp/tutorial/getting-started)に準拠。
