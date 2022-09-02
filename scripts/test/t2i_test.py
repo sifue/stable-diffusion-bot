@@ -24,9 +24,9 @@ pipe = StableDiffusionPipeline.from_pretrained(
     MODEL_ID, revision="fp16", torch_dtype=torch.float16, use_auth_token=YOUR_TOKEN)
 pipe.to(DEVICE)
 
-prompt = "A photo of a young, slender woman wearing shiny rubber tights standing facing forward, showing her entire body."
+prompt = "Hatsune Mikum, Medium shot, alone, an anime girl, Otaku, Daisuki, Senpai, Kawaii, hq, wallpaper, style of Moe, VTuber, Manga, character introduction, sharp eyes,best scene, import, official, capture, winning works, winning creative, best illustration, ranking, support artist, angle, how to draw, demo, import, comic con, expo, gallery, art book"
+# prompt = "A photo of a young, slender woman wearing shiny rubber tights standing facing forward, showing her entire body."
 # prompt = "Medium shot, alone, hq, sharp eyes, pictures of beautiful people cosplaying at Comiket, detail, pretty face and eyes, best shot"
-# prompt = "Hatsune Mikum, Medium shot, alone, an anime girl, Otaku, Daisuki, Senpai, Kawaii, hq, wallpaper, style of Moe, VTuber, Manga, character introduction, sharp eyes,best scene, import, official, capture, winning works, winning creative, best illustration, ranking, support artist, angle, how to draw, demo, import, comic con, expo, gallery, art book"
 # prompt = "Young, slender, well-waisted woman in tights, facing front."
 # prompt = "beautiful illustration of anime maid, stunning and rich detail, pretty face and eyes. 3D style, Pixiv featured."
 

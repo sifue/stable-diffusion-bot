@@ -34,6 +34,7 @@ python3 script/main.py
 ### OAuth & Permissions - Bot Token Scopes
 - chat:write
 - files:write
+- files:read
 
 ### Event Subscriptions
 - message.channels
