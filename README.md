@@ -1,4 +1,4 @@
-# Stable Diffusion Bot
+# Stable Diffusion SlackBot
 日本語でプロンプトを与えるとStable Diffusionの画像を投稿してくれるSlack Bot  
 元画像を指定しての生成もできるコマンドも提供。
 RTX2070 8GB環境とGTX2060 6GB環境で操作確認済み。
