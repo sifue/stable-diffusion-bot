@@ -1,23 +1,6 @@
-import os
-from slack_bolt import App
-from slack_bolt.adapter.socket_mode import SocketModeHandler
-from dotenv import load_dotenv
-load_dotenv()
-import re
-import torch
-from diffusers import StableDiffusionPipeline
-from torch import autocast
-import gc
-
-from io import BytesIO
-import numpy as np
-from PIL import Image
-import PIL
-import inspect
-from typing import List, Optional, Union
-
-from tqdm.auto import tqdm
-
+import requests
+from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTokenizer
+from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers import (
     AutoencoderKL,
     DDIMScheduler,
@@ -25,10 +8,24 @@ from diffusers import (
     PNDMScheduler,
     UNet2DConditionModel,
 )
-from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTokenizer
+from tqdm.auto import tqdm
+from typing import List, Optional, Union
+import inspect
+import PIL
+from PIL import Image
+import numpy as np
+from io import BytesIO
+import gc
+from torch import autocast
+from diffusers import StableDiffusionPipeline
+import torch
+import re
+import os
+from slack_bolt import App
+from slack_bolt.adapter.socket_mode import SocketModeHandler
+from dotenv import load_dotenv
+load_dotenv()
 
-import requests
 
 class StableDiffusionImg2ImgPipeline(DiffusionPipeline):
     def __init__(
@@ -75,8 +72,8 @@ class StableDiffusionImg2ImgPipeline(DiffusionPipeline):
                 f"`prompt` has to be of type `str` or `list` but is {type(prompt)}")
 
         if strength < 0 or strength > 1:
-          raise ValueError(
-              f'The value of strength should in [0.0, 1.0] but is {strength}')
+            raise ValueError(
+                f'The value of strength should in [0.0, 1.0] but is {strength}')
 
         # set timesteps
         accepts_offset = "offset" in set(inspect.signature(
@@ -186,6 +183,7 @@ class StableDiffusionImg2ImgPipeline(DiffusionPipeline):
 
         return {"sample": image, "nsfw_content_detected": has_nsfw_concept}
 
+
 def preprocess(image):
     w, h = image.size
     # resize to integer multiple of 32
@@ -195,6 +193,7 @@ def preprocess(image):
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
     return 2.*image - 1.
+
 
 app = App(token=os.getenv('SLACK_BOT_TOKEN'))
 
@@ -211,6 +210,7 @@ pipe = None
 pipeW = None
 pipeI2I = None
 
+
 @app.message(re.compile(r"^!img ([ a-zA-Z0-9!-/:-@¥[-`'{-~]+)$"))
 def message_img(client, message, say, context):
     global usingUser
@@ -220,7 +220,7 @@ def message_img(client, message, say, context):
     try:
         if usingUser is not None:
             say(f"<@{usingUser}> さんが画像を生成中ですのでしばらくお待ちください。")
-        
+
         else:
             if pipe is None:
                 del pipeI2I
@@ -243,9 +243,9 @@ def message_img(client, message, say, context):
             with autocast(DEVICE):
                 print(f'Generating start. ')
                 image = pipe(prompt, guidance_scale=7.5,
-                            height=HEIGHT,
-                            width=WIDTH,
-                            num_inference_steps=100)["sample"][0]
+                             height=HEIGHT,
+                             width=WIDTH,
+                             num_inference_steps=100)["sample"][0]
 
                 os.makedirs('./results', exist_ok=True)
                 image.save(GENERATED_FILEPATH)
@@ -264,6 +264,7 @@ def message_img(client, message, say, context):
         print(e)
         say(f"エラーが発生しました。やり方を変えて試してみてください。 Error: {e}")
 
+
 @app.message(re.compile(r"^!img-w ([ a-zA-Z0-9!-/:-@¥[-`'{-~]+)$"))
 def message_img_waifu(client, message, say, context):
     global usingUser
@@ -273,7 +274,7 @@ def message_img_waifu(client, message, say, context):
     try:
         if usingUser is not None:
             say(f"<@{usingUser}> さんが画像を生成中ですのでしばらくお待ちください。")
-        
+
         else:
             if pipeW is None:
                 del pipe
@@ -286,15 +287,15 @@ def message_img_waifu(client, message, say, context):
                 print('Model(T2I-waifu) loading start.')
                 pipeW = StableDiffusionPipeline.from_pretrained(
                     MODEL_ID,
-                    revision="fp16", 
-                    torch_dtype=torch.float16, 
+                    revision="fp16",
+                    torch_dtype=torch.float16,
                     use_auth_token=YOUR_TOKEN,
                     scheduler=DDIMScheduler(
-                    beta_start=0.00085,
-                    beta_end=0.012,
-                    beta_schedule="scaled_linear",
-                    clip_sample=False,
-                    set_alpha_to_one=False,
+                        beta_start=0.00085,
+                        beta_end=0.012,
+                        beta_schedule="scaled_linear",
+                        clip_sample=False,
+                        set_alpha_to_one=False,
                     ),
                 )
                 pipeW.to(DEVICE)
@@ -307,9 +308,9 @@ def message_img_waifu(client, message, say, context):
             with autocast(DEVICE):
                 print(f'Generating start. ')
                 image = pipeW(prompt, guidance_scale=7.5,
-                            height=HEIGHT,
-                            width=WIDTH,
-                            num_inference_steps=100)["sample"][0]
+                              height=HEIGHT,
+                              width=WIDTH,
+                              num_inference_steps=100)["sample"][0]
 
                 os.makedirs('./results', exist_ok=True)
                 image.save(GENERATED_FILEPATH)
@@ -350,7 +351,7 @@ def message_i2i(client, message, say, context):
                 say(f"image-to-imageのモデルのローディングを行います。")
                 print('Model(I2I) loading start.')
                 scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012,
-                                        beta_schedule="scaled_linear", clip_sample=False, set_alpha_to_one=False)
+                                          beta_schedule="scaled_linear", clip_sample=False, set_alpha_to_one=False)
                 pipeI2I = StableDiffusionImg2ImgPipeline.from_pretrained(
                     MODEL_ID,
                     scheduler=scheduler,
@@ -360,15 +361,16 @@ def message_i2i(client, message, say, context):
                 ).to(DEVICE)
                 print('Model(I2I) loading finished.')
 
-            url = context['matches'][0] # Slack上ではURLは <URL> の形式になっている
+            url = context['matches'][0]  # Slack上ではURLは <URL> の形式になっている
             say(f"指定された画像のダウンロードを行います。")
 
             SLACK_BOT_TOKEN = os.getenv('SLACK_BOT_TOKEN')
             urlData = requests.get(url,
-                allow_redirects=True,
-                headers={'Authorization': f"Bearer {SLACK_BOT_TOKEN}"},
-                stream=True
-            ).content
+                                   allow_redirects=True,
+                                   headers={
+                                       'Authorization': f"Bearer {SLACK_BOT_TOKEN}"},
+                                   stream=True
+                                   ).content
             with open(INIT_FILEPATH, mode='wb') as f:
                 f.write(urlData)
 
@@ -392,10 +394,10 @@ def message_i2i(client, message, say, context):
 
                     print(f'Generating start. ')
                     image = pipeI2I(prompt,
-                            guidance_scale=7.5,
-                            init_image=init_image,
-                            strength=strength,
-                            num_inference_steps=100)["sample"][0]
+                                    guidance_scale=7.5,
+                                    init_image=init_image,
+                                    strength=strength,
+                                    num_inference_steps=100)["sample"][0]
 
                     os.makedirs('./results', exist_ok=True)
                     image.save(GENERATED_FILEPATH)
@@ -414,15 +416,16 @@ def message_i2i(client, message, say, context):
         print(e)
         say(f"エラーが発生しました。やり方を変えて試してみてください。 Error: {e}")
 
+
 @app.message(re.compile(r"^!img-help$"))
 def message_help(client, message, say, context):
-    say("`!img [半角英数字記号で構成されるプロンプト]` の形式で画像の生成ができます。\n" + 
-    "元画像指定する場合には、 `!img-i [Slack内の画像のURL] [0.0～1.0までの強度] [プロンプト]` としてください。\n" + 
-    "萌え絵専用モデルでテキストから生成する場合には、 `!img-w [プロンプト]` としてください。\n" + 
-    "生成には1分程度の時間がかかります。" + 
-    "また、誰かが生成している際には実行できません。内部的にはStable Diffusionというモデルを利用しています。" +
-     "そのため生成した画像のライセンスはCC0 1.0 Universal Public Domain Dedicationとなり誰にも著作権は発生しません。" + 
-     "またプロンプト探しには https://lexica.art/ をご利用ください。")
+    say("`!img [半角英数字記号で構成されるプロンプト]` の形式で画像の生成ができます。\n" +
+        "元画像指定する場合には、 `!img-i [Slack内の画像のURL] [0.0～1.0までの強度] [プロンプト]` としてください。\n" +
+        "萌え絵専用モデルでテキストから生成する場合には、 `!img-w [プロンプト]` としてください。\n" +
+        "生成には1分程度の時間がかかります。" +
+        "また、誰かが生成している際には実行できません。内部的にはStable Diffusionというモデルを利用しています。" +
+        "そのため生成した画像のライセンスはCC0 1.0 Universal Public Domain Dedicationとなり誰にも著作権は発生しません。" +
+        "またプロンプト探しには https://lexica.art/ をご利用ください。")
 
 
 @app.event("message")
