@@ -198,6 +198,7 @@ def preprocess(image):
 app = App(token=os.getenv('SLACK_BOT_TOKEN'))
 
 MODEL_ID = "CompVis/stable-diffusion-v1-4"
+WAIFU_MODEL_ID = "hakurei/waifu-diffusion"
 DEVICE = "cuda"
 YOUR_TOKEN = os.getenv('YOUR_TOKEN')
 GENERATED_FILEPATH = "./results/generated.png"
@@ -286,7 +287,7 @@ def message_img_waifu(client, message, say, context):
                 say(f"text-to-image-waifuのモデルのローディングを行います。")
                 print('Model(T2I-waifu) loading start.')
                 pipeW = StableDiffusionPipeline.from_pretrained(
-                    MODEL_ID,
+                    WAIFU_MODEL_ID,
                     revision="fp16",
                     torch_dtype=torch.float16,
                     use_auth_token=YOUR_TOKEN,
