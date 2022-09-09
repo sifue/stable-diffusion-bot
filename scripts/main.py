@@ -208,12 +208,14 @@ HEIGHT = 512
 
 usingUser = None
 pipe = None
+pipeW = None
 pipeI2I = None
 
 @app.message(re.compile(r"^!img ([ a-zA-Z0-9!-/:-@¥[-`'{-~]+)$"))
 def message_img(client, message, say, context):
     global usingUser
     global pipe
+    global pipeW
     global pipeI2I
     try:
         if usingUser is not None:
@@ -223,6 +225,8 @@ def message_img(client, message, say, context):
             if pipe is None:
                 del pipeI2I
                 pipeI2I = None
+                del pipeW
+                pipeW = None
                 gc.collect()
 
                 say(f"text-to-imageのモデルのローディングを行います。")
@@ -260,11 +264,76 @@ def message_img(client, message, say, context):
         print(e)
         say(f"エラーが発生しました。やり方を変えて試してみてください。 Error: {e}")
 
+@app.message(re.compile(r"^!img-w ([ a-zA-Z0-9!-/:-@¥[-`'{-~]+)$"))
+def message_img_waifu(client, message, say, context):
+    global usingUser
+    global pipe
+    global pipeW
+    global pipeI2I
+    try:
+        if usingUser is not None:
+            say(f"<@{usingUser}> さんが画像を生成中ですのでしばらくお待ちください。")
+        
+        else:
+            if pipeW is None:
+                del pipe
+                pipe = None
+                del pipeI2I
+                pipeI2I = None
+                gc.collect()
+
+                say(f"text-to-image-waifuのモデルのローディングを行います。")
+                print('Model(T2I-waifu) loading start.')
+                pipeW = StableDiffusionPipeline.from_pretrained(
+                    MODEL_ID,
+                    revision="fp16", 
+                    torch_dtype=torch.float16, 
+                    use_auth_token=YOUR_TOKEN,
+                    scheduler=DDIMScheduler(
+                    beta_start=0.00085,
+                    beta_end=0.012,
+                    beta_schedule="scaled_linear",
+                    clip_sample=False,
+                    set_alpha_to_one=False,
+                    ),
+                )
+                pipeW.to(DEVICE)
+                print('Model(T2I-waifu) loading finished.')
+
+            usingUser = message['user']
+            prompt = context['matches'][0]
+            say(f"<@{message['user']}> さんのプロンプト `{prompt}` でwaifuモデルで画像を生成します。1分程度お待ちください。")
+
+            with autocast(DEVICE):
+                print(f'Generating start. ')
+                image = pipeW(prompt, guidance_scale=7.5,
+                            height=HEIGHT,
+                            width=WIDTH,
+                            num_inference_steps=100)["sample"][0]
+
+                os.makedirs('./results', exist_ok=True)
+                image.save(GENERATED_FILEPATH)
+                print(f'Generating finished.')
+
+            client.files_upload(
+                channels=message['channel'],
+                file=GENERATED_FILEPATH,
+                title=prompt
+            )
+
+            say(f"<@{message['user']}> さんのプロンプト `{prompt}` の画像の生成が終わりました。")
+            usingUser = None
+    except Exception as e:
+        usingUser = None
+        print(e)
+        say(f"エラーが発生しました。やり方を変えて試してみてください。 Error: {e}")
+
 
 @app.message(re.compile(r"^!img-i <(https?://[\w/:%#\$&\?\(\)~\.=\+\-]+)> ([0-9\.]+) ([ a-zA-Z0-9!-/:-@¥[-`'{-~]+)$"))
 def message_i2i(client, message, say, context):
     global usingUser
     global pipe
+    global pipeW
     global pipeI2I
     try:
         if usingUser is not None:
@@ -274,6 +343,8 @@ def message_i2i(client, message, say, context):
             if pipeI2I is None:
                 del pipe
                 pipe = None
+                del pipeW
+                pipeW = None
                 gc.collect()
 
                 say(f"image-to-imageのモデルのローディングを行います。")
@@ -345,8 +416,9 @@ def message_i2i(client, message, say, context):
 
 @app.message(re.compile(r"^!img-help$"))
 def message_help(client, message, say, context):
-    say("`!img [半角英数字記号で構成されるプロンプト]` の形式で画像の生成ができます。" + 
+    say("`!img [半角英数字記号で構成されるプロンプト]` の形式で画像の生成ができます。\n" + 
     "元画像指定する場合には、 `!img-i [Slack内の画像のURL] [0.0～1.0までの強度] [プロンプト]` としてください。\n" + 
+    "萌え絵専用モデルでテキストから生成する場合には、 `!img-w [プロンプト]` としてください。\n" + 
     "生成には1分程度の時間がかかります。" + 
     "また、誰かが生成している際には実行できません。内部的にはStable Diffusionというモデルを利用しています。" +
      "そのため生成した画像のライセンスはCC0 1.0 Universal Public Domain Dedicationとなり誰にも著作権は発生しません。" + 
