@@ -21,7 +21,7 @@ SLACK_APP_TOKEN=xapp-999999999999999999999999
 設定後、実行は以下のコマンドの通り。
 
 ```
-python3 script/main.py
+python3 scripts/main.py
 ```
 ## Stable Diffusion Botの使い方
 

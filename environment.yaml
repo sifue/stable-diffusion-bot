@@ -12,7 +12,7 @@ dependencies:
   - pip:
     - slack_bolt==1.14.3
     - python-dotenv==0.20.0
-    - request==2.28.1
+    - requests==2.28.1
     - albumentations==0.4.3
     - opencv-python==4.1.2.30
     - pudb==2019.2
