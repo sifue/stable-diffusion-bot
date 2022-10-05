@@ -27,7 +27,7 @@ python3 script/main.py
 
 - プロンプトから画像生成(t2i): !img [プロンプト]
 - 画像から画像生成(i2i): !img-i [URL] [0.0～1.0までの強度] [プロンプト]
-- waifu-diffusionモデルをつかってプロンプトから画像生成(t2i-waifu): !img [プロンプト]
+- waifu-diffusionモデルをつかってプロンプトから画像生成(t2i-waifu): !img-w [プロンプト]
 - ヘルプ表示: !img-help
 
 なお、画像から画像生成する際のURLはパブリックにアクセス可能なURLかSlack内の画像のURLである必要があります。  
